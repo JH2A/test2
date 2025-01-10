@@ -13,8 +13,14 @@
 </head>
 <body>
     <h1>鬼退治！豆まきチャレンジ</h1>
-    <p id="score">得点: 0</p>
+    <p id="score">得点: 0 | ハイスコア: 0</p>
     <canvas id="gameCanvas" width="600" height="400"></canvas>
+    <audio id="bgm" loop>
+        <source src="bgm.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="hitSound">
+        <source src="hit.mp3" type="audio/mpeg">
+    </audio>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -22,39 +28,64 @@
         let timer = 30;
         let gameInterval, timerInterval;
 
-        const drawOni = (x, y) => {
-            ctx.fillStyle = 'red';
+        let highScore = localStorage.getItem('highScore') || 0;
+        document.getElementById('score').innerText = `得点: 0 | ハイスコア: ${highScore}`;
+
+        const bgm = document.getElementById('bgm');
+        const hitSound = document.getElementById('hitSound');
+        bgm.play();
+
+        const oniTypes = [
+            { color: 'red', points: 10 },
+            { color: 'blue', points: 20 },
+            { color: 'gold', points: 50 },
+        ];
+
+        const updateHighScore = () => {
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('highScore', highScore);
+            }
+        };
+
+        const drawOni = (x, y, color) => {
+            ctx.fillStyle = color;
             ctx.beginPath();
-            ctx.arc(x, y, 30, 0, Math.PI * 2);
+            ctx.arc(x, y, 50, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = 'black';
-            ctx.fillText('👹', x - 10, y + 10);
+            ctx.fillText('👹', x - 15, y + 15);
         };
 
         const spawnOni = () => {
+            const oni = oniTypes[Math.floor(Math.random() * oniTypes.length)];
             const x = Math.random() * canvas.width;
             const y = Math.random() * canvas.height;
-            drawOni(x, y);
+
+            drawOni(x, y, oni.color);
+
             canvas.addEventListener('click', (event) => {
                 const rect = canvas.getBoundingClientRect();
                 const clickX = event.clientX - rect.left;
                 const clickY = event.clientY - rect.top;
-                if (Math.hypot(clickX - x, clickY - y) < 30) {
-                    score += 10;
-                    document.getElementById('score').innerText = `得点: ${score}`;
-                    ctx.clearRect(x - 30, y - 30, 60, 60); // 鬼を消す
+                if (Math.hypot(clickX - x, clickY - y) < 50) {
+                    score += oni.points;
+                    document.getElementById('score').innerText = `得点: ${score} | ハイスコア: ${highScore}`;
+                    ctx.clearRect(x - 50, y - 50, 100, 100);
+                    hitSound.play();
                 }
             });
         };
 
         const startGame = () => {
-            gameInterval = setInterval(spawnOni, 1000); // 1秒ごとに鬼を出現
+            gameInterval = setInterval(spawnOni, 1000);
             timerInterval = setInterval(() => {
                 timer--;
                 if (timer === 0) {
                     clearInterval(gameInterval);
                     clearInterval(timerInterval);
-                    alert(`ゲーム終了！最終得点: ${score}`);
+                    updateHighScore();
+                    alert(`ゲーム終了！最終得点: ${score}\nハイスコア: ${highScore}`);
                 }
             }, 1000);
         };
